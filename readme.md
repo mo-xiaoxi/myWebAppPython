@@ -8,8 +8,8 @@
 
 
 - 2.项目结构
-
-`awesome-python-webapp/   <-- 根目录
+```
+awesome-python-webapp/   <-- 根目录
 |
 +- backup/               <-- 备份目录
 |
@@ -24,3 +24,4 @@
 |  +- templates/         <-- 存放模板文件
 |
 +- LICENSE               <-- 代码LICENSE`
+```
