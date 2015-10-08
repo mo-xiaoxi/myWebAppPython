@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
+# -*- coding: utf-8 -*-
 
-'''
+"""
 orm模块设计的原因：
     1. 简化操作
         sql操作的数据是 关系型数据， 而python操作的是对象，为了简化编程 所以需要对他们进行映射
@@ -27,33 +27,40 @@ orm模块设计的原因：
                 # 存入数据库:
                 user.insert()
             最后 id/name 要变成 user实例的属性
-'''
-import db,time,logging
-#触发器
-_trigger= frozenset(['pre_insert','pre_update','pre_delete'])
+"""
 
-def _gen_sql(table_name,mappings):
-    '''
-    将类=》表时，生成创建表的sql
-    '''
+import db
+import time
+import logging
+
+
+_triggers = frozenset(['pre_insert', 'pre_update', 'pre_delete'])
+
+
+def _gen_sql(table_name, mappings):
+    """
+    类 ==> 表时 生成创建表的sql
+    """
     pk = None
-    sql = ['-- generating SQL for %s:'% table_name,'create table `%s` (' % table_name]
-    for f in sorted(mappings,values(),lambda x,y: cmp(x._order,y.order)):
-        if not hasattr(f,'ddl'):
+    sql = ['-- generating SQL for %s:' % table_name, 'create table `%s` (' % table_name]
+    for f in sorted(mappings.values(), lambda x, y: cmp(x._order, y._order)):
+        if not hasattr(f, 'ddl'):
             raise StandardError('no ddl in field "%s".' % f)
-        ddl=f.ddl
+        ddl = f.ddl
         nullable = f.nullable
         if f.primary_key:
-            pk=f.name
-        sql.append('  `%s` %s,'% (f.name,ddl) if nullable else '   `%s` %s not null,' % (f.name ,ddl))
-    sql.append('    primary key(`%s`) ' %pk)
+            pk = f.name
+        #sql.append(nullable and '  `%s` %s,' % (f.name, ddl) or '  `%s` %s not null,' % (f.name, ddl))
+        sql.append('  `%s` %s,' % (f.name, ddl) if nullable else '  `%s` %s not null,' % (f.name, ddl))
+    sql.append('  primary key(`%s`)' % pk)
     sql.append(');')
     return '\n'.join(sql)
 
+
 class Field(object):
     """
-     保存数据库中的表的  字段属性
-    _count: 类属性，每实例化一次，该值就+1
+    保存数据库中的表的  字段属性
+    _count: 类属性，没实例化一次，该值就+1
     self._order: 实例属性， 实例化时从类属性处得到，用于记录 该实例是 该类的第多少个实例
         例如最后的doctest：
             定义user时该类进行了5次实例化，来保存字段属性
@@ -82,31 +89,30 @@ class Field(object):
                      这里passwd的默认值 就可以通过 返回的函数 调用取得
     其他的实例属性都是用来描述字段属性的
     """
-
-    _count =0
+    _count = 0
 
     def __init__(self, **kw):
-        self.name = kw.get('name',None)
-        self._default = kw.get('default',None)
-        self.primary_key = kw.get('primary_key',False)
-        self.nullable = kw.get('nullable',False)
-        self.updatable = kw.get('updatable',True)
-        self.ddl = kw.get('ddl','')
+        self.name = kw.get('name', None)
+        self._default = kw.get('default', None)
+        self.primary_key = kw.get('primary_key', False)
+        self.nullable = kw.get('nullable', False)
+        self.updatable = kw.get('updatable', True)
+        self.insertable = kw.get('insertable', True)
+        self.ddl = kw.get('ddl', '')
         self._order = Field._count
-        Field._count +=1
-
+        Field._count += 1
 
     @property
     def default(self):
         """
-        利用getter实现的一个写保护的实例属性
+        利用getter实现的一个写保护的 实例属性
         """
         d = self._default
         return d() if callable(d) else d
 
     def __str__(self):
         """
-         返回实例对象的描述信息，比如：
+        返回实例对象的描述信息，比如：
             <IntegerField:id,bigint,default(0),UI>
             类：实例：实例ddl属性：实例default信息，3中标志位：N U I
         """
@@ -118,18 +124,18 @@ class Field(object):
         return ''.join(s)
 
 
-
 class StringField(Field):
-    '''
+    """
     保存String类型字段的属性
-    '''
-    def  __init__(self,**kw):
+    """
+    def __init__(self, **kw):
         if 'default' not in kw:
-            kw['default']= ''
+            kw['default'] = ''
         if 'ddl' not in kw:
-            kw['ddl']='varchar(255)'
-        super(StringField,self).__init__(**kw)
-        
+            kw['ddl'] = 'varchar(255)'
+        super(StringField, self).__init__(**kw)
+
+
 class IntegerField(Field):
     """
     保存Integer类型字段的属性
@@ -140,6 +146,7 @@ class IntegerField(Field):
         if 'ddl' not in kw:
             kw['ddl'] = 'bigint'
         super(IntegerField, self).__init__(**kw)
+
 
 class FloatField(Field):
     """
@@ -186,6 +193,15 @@ class BlobField(Field):
         if 'ddl' not in kw:
             kw['ddl'] = 'blob'
         super(BlobField, self).__init__(**kw)
+
+
+class VersionField(Field):
+    """
+    保存Version类型字段的属性
+    """
+    def __init__(self, name=None):
+        super(VersionField, self).__init__(name=name, default=0, ddl='bigint')
+
 
 class ModelMetaclass(type):
     """
