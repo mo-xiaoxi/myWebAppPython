@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -22,3 +23,28 @@ u1.delete()
 
 u2 = User.find_first('where email=?', 'test@example.com')
 print 'find user:', u2
+=======
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+
+from models import User,Blog,Comment
+
+from transwarp import db
+
+db.creat_engine(user='www-data',password='www-data',database='awesome')
+
+u =User(name='Test',email='test@example.com',password='12345',image='about:blank')
+
+u.insert()
+
+print 'new user id:', u.id
+
+u1 = User.find_first('where email =?','test@example.com')
+print 'find user\'s name:',u1.name
+
+u1.delete
+
+u2 = User.find_first('where email=?','test@example.com')
+
+print 'find user:', u2
+>>>>>>> day_5
